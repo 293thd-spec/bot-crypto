@@ -11,7 +11,7 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
 # =========================
-# SEND TELEGRAM
+# TELEGRAM SEND
 # =========================
 def send_telegram(text):
     if not TOKEN or not CHAT_ID:
@@ -23,24 +23,30 @@ def send_telegram(text):
 
 
 # =========================
-# GET BTC M5 DATA (BINANCE)
+# GET BTC M5 FROM OKX
 # =========================
 def get_btc_closes():
-    url = "https://api.binance.com/api/v3/klines"
+    url = "https://www.okx.com/api/v5/market/candles"
     params = {
-        "symbol": "BTCUSDT",
-        "interval": "5m",
-        "limit": 100
+        "instId": "BTC-USDT",
+        "bar": "5m",
+        "limit": "100"
     }
 
     r = requests.get(url, params=params)
     data = r.json()
 
-    if not isinstance(data, list):
+    if "data" not in data:
         print("API error:", data)
         return None
 
-    return np.array([float(c[4]) for c in data])  # close price
+    candles = data["data"]
+
+    # OKX trả ngược → đảo lại
+    candles = candles[::-1]
+
+    closes = [float(c[4]) for c in candles]
+    return np.array(closes)
 
 
 # =========================
@@ -81,7 +87,7 @@ def swings(arr):
 
 
 # =========================
-# CHECK DIVERGENCE
+# DIVERGENCE CHECK
 # =========================
 def check_div(price, macd_line):
     if price is None or len(price) < 50:
@@ -105,7 +111,7 @@ def check_div(price, macd_line):
 # MAIN LOOP
 # =========================
 def run():
-    send_telegram("🚀 BTC MACD M5 BOT STARTED")
+    send_telegram("🚀 BTC MACD M5 BOT STARTED (OKX VERSION)")
 
     while True:
         price = get_btc_closes()
@@ -125,7 +131,7 @@ def run():
 
         print("Checked BTC")
 
-        time.sleep(300)  # 5 phút chuẩn M5
+        time.sleep(300)  # 5 phút = M5 chuẩn
 
 
 # =========================
