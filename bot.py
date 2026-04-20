@@ -5,8 +5,8 @@ import os
 # =========================
 # CONFIG (Railway Variables)
 # =========================
-TOKEN = os.getenv("TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+TELEGRAM_BOT_TOKEN = os.getenv("TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("CHAT_ID")
 
 # =========================
 # TELEGRAM FUNCTION
