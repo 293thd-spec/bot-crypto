@@ -4,7 +4,7 @@ import requests
 import numpy as np
 
 # =========================
-# CONFIG TELEGRAM
+# TELEGRAM CONFIG
 # =========================
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -19,31 +19,16 @@ def send_telegram(text):
         return
 
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    try:
-        requests.post(url, data={"chat_id": CHAT_ID, "text": text})
-    except Exception as e:
-        print("Telegram error:", e)
+    requests.post(url, data={"chat_id": CHAT_ID, "text": text})
 
 
 # =========================
-# LOAD COINS
+# GET BTC M5 DATA (BINANCE)
 # =========================
-def load_coins():
-    try:
-        with open("coins.txt", "r") as f:
-            return [x.strip().upper().replace("-", "") for x in f if x.strip()]
-    except:
-        return []
-
-
-# =========================
-# GET BINANCE M5 DATA
-# =========================
-def get_closes(symbol):
+def get_btc_closes():
     url = "https://api.binance.com/api/v3/klines"
-
     params = {
-        "symbol": symbol,
+        "symbol": "BTCUSDT",
         "interval": "5m",
         "limit": 100
     }
@@ -51,13 +36,11 @@ def get_closes(symbol):
     r = requests.get(url, params=params)
     data = r.json()
 
-    # 🔥 FIX ERROR: check valid data
     if not isinstance(data, list):
-        print("API error:", symbol, data)
+        print("API error:", data)
         return None
 
-    closes = [float(c[4]) for c in data]  # CLOSE PRICE
-    return np.array(closes)
+    return np.array([float(c[4]) for c in data])  # close price
 
 
 # =========================
@@ -79,15 +62,13 @@ def ema(data, period):
 def macd(data):
     ema12 = ema(data, 12)
     ema26 = ema(data, 26)
-    macd_line = ema12 - ema26
-    signal = ema(macd_line, 9)
-    return macd_line
+    return ema12 - ema26
 
 
 # =========================
-# SWING DETECTION (SIMPLE BUT SAFE)
+# SWING DETECTION
 # =========================
-def get_swings(arr):
+def swings(arr):
     last = arr[-20:]
 
     low1 = np.min(last[:10])
@@ -100,17 +81,17 @@ def get_swings(arr):
 
 
 # =========================
-# DIVERGENCE CHECK
+# CHECK DIVERGENCE
 # =========================
 def check_div(price, macd_line):
     if price is None or len(price) < 50:
         return None
 
-    p_low1, p_low2, p_high1, p_high2 = get_swings(price)
-    m_low1, m_low2, m_high1, m_high2 = get_swings(macd_line)
+    p_l1, p_l2, p_h1, p_h2 = swings(price)
+    m_l1, m_l2, m_h1, m_h2 = swings(macd_line)
 
-    bullish = (p_low2 < p_low1) and (m_low2 > m_low1)
-    bearish = (p_high2 > p_high1) and (m_high2 < m_high1)
+    bullish = (p_l2 < p_l1) and (m_l2 > m_l1)
+    bearish = (p_h2 > p_h1) and (m_h2 < m_h1)
 
     if bullish:
         return "BULLISH"
@@ -121,39 +102,29 @@ def check_div(price, macd_line):
 
 
 # =========================
-# MAIN BOT
+# MAIN LOOP
 # =========================
 def run():
-    send_telegram("🚀 MACD M5 BOT STARTED (FIXED VERSION)")
+    send_telegram("🚀 BTC MACD M5 BOT STARTED")
 
     while True:
-        coins = load_coins()
+        price = get_btc_closes()
 
-        if not coins:
-            print("No coins")
-            time.sleep(30)
+        if price is None:
+            time.sleep(60)
             continue
 
-        for coin in coins:
-            print("Scanning:", coin)
+        macd_line = macd(price)
 
-            price = get_closes(coin)
+        signal = check_div(price, macd_line)
 
-            if price is None:
-                continue
+        if signal:
+            send_telegram(
+                f"📊 BTCUSDT\nTF: M5\nMACD Divergence: {signal}"
+            )
 
-            macd_line = macd(price)
+        print("Checked BTC")
 
-            signal = check_div(price, macd_line)
-
-            if signal:
-                send_telegram(
-                    f"📊 {coin}\nTF: M5\nMACD Divergence: {signal}"
-                )
-
-            time.sleep(1)
-
-        print("Cycle done")
         time.sleep(300)  # 5 phút chuẩn M5
 
 
