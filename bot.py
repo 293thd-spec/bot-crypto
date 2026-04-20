@@ -7,8 +7,8 @@ import os
 # ======================
 # CONFIG
 # ======================
-TOKEN = os.getenv("8696322142:AAFGjb94MNzYsQkKVHdNLcdkYfmbjLUlIF8")
-CHAT_ID = os.getenv("264209707")
+TOKEN = os.getenv("TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 # ======================
 # TELEGRAM FUNCTION
