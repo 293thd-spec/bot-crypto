@@ -1,19 +1,22 @@
 import os
 import requests
+import time
 
-# Lấy biến và xóa khoảng trắng/dấu ngoặc dư thừa nếu có
-TOKEN = str(os.getenv("TELEGRAM_BOT_TOKEN", "")).strip().replace('"', '')
-CHAT_ID = str(os.getenv("TELEGRAM_CHAT_ID", "")).strip().replace('"', '')
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-print(f"DEBUG: Token đang dùng: {TOKEN[:10]}...") # Chỉ in 1 phần để bảo mật
-print(f"DEBUG: Chat ID đang dùng: {CHAT_ID}")
+def send_telegram(msg):
+    if not TOKEN or not CHAT_ID:
+        print("Missing TOKEN or CHAT_ID")
+        print("TOKEN =", TOKEN)
+        print("CHAT_ID =", CHAT_ID)
+        return
 
-if not TOKEN or not CHAT_ID:
-    print("❌ Vẫn không tìm thấy biến! Hãy kiểm tra lại tab Variables trên Railway.")
-else:
-    # Thử gửi tin nhắn ngay khi khởi động
-    url = f"https://telegram.org{TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": "🔔 Railway đã kết nối Telegram thành công!"}
-    
-    res = requests.post(url, data=payload)
-    print(f"Kết quả gửi thử: {res.json()}")
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+
+send_telegram("🚀 BOT STARTED")
+
+while True:
+    print("Bot running...")
+    time.sleep(60)
