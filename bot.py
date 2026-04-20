@@ -6,10 +6,14 @@ import os
 
 TOKEN = os.getenv("8696322142:AAFGjb94MNzYsQkKVHdNLcdkYfmbjLUlIF8")
 CHAT_ID = os.getenv("264209707")
-def send_telegram(...):def send_telegram(msg):
+
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+# TEST
+send_telegram("BOT OK")
 
+while True:
+    time.sleep(60)
 def load_coins():
     with open("coins.txt", "r") as f:
         return [line.strip() for line in f if line.strip()]
