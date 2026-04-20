@@ -4,20 +4,29 @@ import ta
 import time
 import os
 
+# ======================
+# CONFIG
+# ======================
 TOKEN = os.getenv("8696322142:AAFGjb94MNzYsQkKVHdNLcdkYfmbjLUlIF8")
 CHAT_ID = os.getenv("264209707")
 
+# ======================
+# TELEGRAM FUNCTION
+# ======================
+def send_telegram(msg):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
-# TEST
-send_telegram("BOT OK")
 
-while True:
-    time.sleep(60)
+# ======================
+# LOAD COINS
+# ======================
 def load_coins():
     with open("coins.txt", "r") as f:
         return [line.strip() for line in f if line.strip()]
 
+# ======================
+# GET DATA FROM OKX
+# ======================
 def get_data(symbol, tf="15m"):
     url = f"https://www.okx.com/api/v5/market/candles?instId={symbol}&bar={tf}&limit=100"
     data = requests.get(url).json()["data"]
@@ -31,16 +40,22 @@ def get_data(symbol, tf="15m"):
     df = df.sort_values("time")
     return df
 
+# ======================
+# DETECT DIVERGENCE
+# ======================
 sent = {}
 
-def check(df, symbol, tf):
+def check_divergence(df, symbol, tf):
     df["rsi"] = ta.momentum.RSIIndicator(df["close"], 14).rsi()
 
     low1 = df["low"].iloc[-10:-5].min()
     low2 = df["low"].iloc[-5:].min()
 
-    rsi1 = df[df["low"] == low1]["rsi"].values[0]
-    rsi2 = df[df["low"] == low2]["rsi"].values[0]
+    try:
+        rsi1 = df[df["low"] == low1]["rsi"].values[0]
+        rsi2 = df[df["low"] == low2]["rsi"].values[0]
+    except:
+        return
 
     if low2 < low1 and rsi2 > rsi1 and rsi2 < 35:
         key = f"{symbol}_{tf}"
@@ -48,20 +63,35 @@ def check(df, symbol, tf):
         if key not in sent or time.time() - sent[key] > 1800:
             price = df["close"].iloc[-1]
 
-            msg = f"🟢 {symbol} | {tf}\nBullish Divergence\nPrice: {price}"
+            msg = f"""
+🟢 {symbol}
+TF: {tf}
+Bullish Divergence
+Price: {price}
+"""
             send_telegram(msg)
 
             sent[key] = time.time()
+
+# ======================
+# MAIN LOOP
+# ======================
+send_telegram("BOT STARTED")
 
 while True:
     coins = load_coins()
 
     for c in coins:
         try:
-            check(get_data(c, "15m"), c, "M15")
-            check(get_data(c, "5m"), c, "M5")
+            df15 = get_data(c, "15m")
+            check_divergence(df15, c, "M15")
+
+            df5 = get_data(c, "5m")
+            check_divergence(df5, c, "M5")
+
             time.sleep(0.5)
-        except:
-            pass
+
+        except Exception as e:
+            print("Error:", c, e)
 
     time.sleep(60)
